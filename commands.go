@@ -1,21 +1,23 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"time"
 	"github.com/vallesda/pokedexcli/internal/pokeapi"
 )
 
 type config struct {
 	PokeClient pokeapi.Client
-	Next string
-	Prev string
+	Next *string
+	Prev *string
 }
 
 type cliCommand struct {
 	name string
 	description string
-	callback func() error
+	callback func(cg *config) error
 }
 
 func commandExit(cg *config) error {
@@ -38,8 +40,8 @@ func commandHelp(cg *config) error {
 func commandMap(cg *config) error {
 	path := "location-area"
 	fullUrl := cg.PokeClient.BuildUrl(path)
-	if cg.Next != "" {
-		fullUrl = cg.Next
+	if cg.Next != nil {
+		fullUrl = *cg.Next
 	}
 
 	locationsResult, err := cg.PokeClient.GetLocations(fullUrl)
@@ -51,7 +53,7 @@ func commandMap(cg *config) error {
 	cg.Next = locationsResult.Next
 	cg.Prev = locationsResult.Previous
 	for _, area := range results {
-		fmt.Println(area.name)
+		fmt.Println(area.Name)
 	}
 
 	return nil
@@ -60,26 +62,26 @@ func commandMap(cg *config) error {
 func commandBMap(cg *config) error {
 	path := "location-area"
 	fullUrl := cg.PokeClient.BuildUrl(path)
-	if cg.Prev != "" {
-		fullUrl = cg.Prev
+	if cg.Prev != nil {
+		fullUrl = *cg.Prev
 	}
 
 	locationsResult, err := cg.PokeClient.GetLocations(fullUrl)
 	if err != nil {
 		return err
 	}
-	results := locationsResult.results
-	*cg.Next = locationsResult.Next
-	*cg.Prev = locationsResult.Previous
+	results := locationsResult.Results
+	cg.Next = locationsResult.Next
+	cg.Prev = locationsResult.Previous
 	for _, area := range results {
-		fmt.Println(area.name)
+		fmt.Println(area.Name)
 	}
 	return nil
 }
 
 func startReading() {
 	scanner := bufio.NewScanner(os.Stdin)
-	conf := config{pokeapi.NewClient(), 0, 0}
+	conf := config{pokeapi.NewClient(5 * time.Minute), nil, nil}
 	for {
 		if !scanner.Scan() {
 			break

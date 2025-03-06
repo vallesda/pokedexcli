@@ -9,8 +9,8 @@ import (
 
 type LocationsResp struct {
 	Count    int    `json:"count"`
-	Next     string `json:"next"`
-	Previous string `json:"previous"`
+	Next     *string `json:"next"`
+	Previous *string `json:"previous"`
 	Results  []struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
@@ -19,6 +19,14 @@ type LocationsResp struct {
 
 func (c *Client) GetLocations(url string) (LocationsResp, error) {
 	locations := LocationsResp{}
+
+	dat, ok := c.cache.Get(url)
+	if ok {
+		err := json.Unmarshal(dat, locations)
+		if err != nil {
+			return locations, err
+		}
+	}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
