@@ -1,10 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"time"
+	"errors"
 	"github.com/vallesda/pokedexcli/internal/pokeapi"
 )
 
@@ -17,16 +16,16 @@ type config struct {
 type cliCommand struct {
 	name string
 	description string
-	callback func(cg *config) error
+	callback func(cg *config, args ...string) error
 }
 
-func commandExit(cg *config) error {
+func commandExit(cg *config, args ...string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(cg *config) error {
+func commandHelp(cg *config, args ...string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println("")
@@ -37,7 +36,7 @@ func commandHelp(cg *config) error {
 	return nil
 }
 
-func commandMap(cg *config) error {
+func commandMap(cg *config, args ...string) error {
 	path := "location-area"
 	fullUrl := cg.PokeClient.BuildUrl(path)
 	if cg.Next != nil {
@@ -59,7 +58,7 @@ func commandMap(cg *config) error {
 	return nil
 }
 
-func commandBMap(cg *config) error {
+func commandBMap(cg *config, args ...string) error {
 	path := "location-area"
 	fullUrl := cg.PokeClient.BuildUrl(path)
 	if cg.Prev != nil {
@@ -79,66 +78,23 @@ func commandBMap(cg *config) error {
 	return nil
 }
 
-func startReading() {
-	scanner := bufio.NewScanner(os.Stdin)
-	conf := config{pokeapi.NewClient(5 * time.Minute), nil, nil}
-	for {
-		if !scanner.Scan() {
-			break
-		}
-
-		input := scanner.Text()
-		words := cleanInput(input)
-		command := words[0]
-
-		switch command {
-		case "map":
-			err := commandMap(&conf)
-			if err != nil {
-				break
-			}
-		case "bmap":
-			err := commandBMap(&conf)
-			if err != nil {
-				break
-			}
-		case "exit":
-			err := commandExit(&conf)
-			if err != nil {
-				break
-			}
-		case "help":
-			err := commandHelp(&conf)
-			if err != nil {
-				break
-			}
-		default:
-			fmt.Println("Unknown command")
-		}
+func commandExplore(cg *config, args ...string) error {
+	if len(args) != 1 {
+		return errors.New("Malformed location")
 	}
-}
 
-func getCommandsMap() map[string]cliCommand{
-	return map[string]cliCommand{
-		"map": {
-			name: "map",
-			description: "Gets next 20 locations",
-			callback: commandMap,
-		},
-		"bmap": {
-			name: "bmap",
-			description: "Gets prev 20 locations",
-			callback: commandBMap,
-		},
-		"exit": {
-			name: "exit",
-			description: "Exit the pokedex",
-			callback: commandExit,
-		},
-		"help": {
-			name: "help",
-			description: "Displays a help message",
-			callback: commandHelp,
-		},
+	location := args[0]
+	path := "location-area/" + location
+	fullUrl := cg.PokeClient.BuildUrl(path)
+	locationsDetails, err := cg.PokeClient.GetLocationDetails(fullUrl)
+	if err != nil {
+		return err
 	}
+
+	results := locationsDetails.PokemonEncounters
+	for _, result := range results {
+		fmt.Println(result.Pokemon.Name)
+	}
+
+	return nil
 }
