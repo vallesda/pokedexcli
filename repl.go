@@ -6,11 +6,19 @@ import (
 	"os"
 	"time"
 	"github.com/vallesda/pokedexcli/internal/pokeapi"
+	"github.com/vallesda/pokedexcli/internal/pokedex"
 )
+
+type config struct {
+	PokeClient pokeapi.Client
+	Pokedex map[string]pokedex.Pokemon
+	Next *string
+	Prev *string
+}
 
 func startReading() {
 	scanner := bufio.NewScanner(os.Stdin)
-	conf := config{pokeapi.NewClient(5 * time.Minute), nil, nil}
+	conf := config{pokeapi.NewClient(5 * time.Minute), pokedex.NewPokedex(), nil, nil}
 	for {
 		if !scanner.Scan() {
 			break
@@ -51,6 +59,21 @@ func startReading() {
 			if err != nil {
 				break
 			}
+		case "catch":
+			err := commandCatch(&conf, args...)
+			if err != nil {
+				break
+			}
+		case "inspect":
+			err := commandInspect(&conf, args...)
+			if err != nil {
+				break
+			}
+		case "pokedex":
+			err := commandPokedex(&conf, args...)
+			if err != nil {
+				break
+			}
 		default:
 			fmt.Println("Unknown command")
 		}
@@ -83,6 +106,21 @@ func getCommandsMap() map[string]cliCommand{
 			name: "explore",
 			description: "Displays availablePokemon",
 			callback: commandExplore,
+		},
+		"catch": {
+			name: "catch",
+			description: "cathes pokemon and adds it to pokedex",
+			callback: commandCatch,
+		},
+		"inspect": {
+			name: "inspect",
+			description: "inspects pokemon in pokedex",
+			callback: commandInspect,
+		},
+		"pokedex": {
+			name: "pokedex",
+			description: "displays pokemon in pokedex",
+			callback: commandPokedex,
 		},
 	}
 }
